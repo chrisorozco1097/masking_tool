@@ -13,13 +13,36 @@ from skimage.transform import resize
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--target-dir',
-        nargs='?',
-        default='images/',
-        help='path to the dir that contains images, it will recursivelly look for all .nii images and provide a mask for them, defaults to the images directory in the project.')
+    nargs='?',
+    default='images/',
+    help='path to the dir that contains images, it will recursivelly look for all .nii images and provide a mask for them, defaults to the images directory in the project.')
+
+parser.add_argument('--remasking', 
+    dest='remasking', 
+    action='store_true',
+    help='flag to indicate already masked images should be re masked, rewritting of all *_mask.nii found, defaults to False')
+parser.add_argument('--no-remasking', 
+    dest='remasking', 
+    action='store_false',
+    help='flag to indicate the skipping of already masked images, if there is a file of the same name with _mask, it will be skipped')
+parser.set_defaults(remasking=False)
+
+parser.add_argument('--post-processing', 
+    dest='post_processing', 
+    action='store_true',
+    help='flag to indicate predicted mask should be post processed (morphological closing and defragged), defaults to True')
+parser.add_argument('--no-post-processing', 
+    dest='post_processing', 
+    action='store_false',
+    help='flag to indicate predicted mask should not be post processed (morphological closing and defragged)')
+parser.set_defaults(post_processing=True)
 
 args = parser.parse_args()
 target_dir = args.target_dir
+remasking = args.remasking
+post_processing = args.post_processing
 model_type = 'unet'
+
 
 def __normalize0_255(img_slice):
     '''Normalizes the image to be in the range of 0-255
@@ -49,6 +72,29 @@ def __normalize0_255(img_slice):
 
     return new_img
 
+def __resizeData(image, target=(256, 256)):
+    image = np.squeeze(image)
+    resized_img = []
+    for i in range(image.shape[0]):
+        img_slice = cv2.resize(image[i,:,:], target)
+        resized_img.append(img_slice)
+
+    image = np.array(resized_img, dtype=np.uint16)
+
+    return image[..., np.newaxis]
+
+def __postProcessing(mask):
+    pred_mask = binary_closing(np.squeeze(mask), cube(2))
+
+    try:
+        labels = label(pred_mask)
+        pred_mask = (labels == np.argmax(np.bincount(labels.flat)[1:])+1).astype(int)
+    except:
+        pred_mask = pred_mask
+
+    return pred_mask
+
+
 def getImageData(fname):
     '''Returns the image data, image matrix and header of
     a particular file'''
@@ -68,22 +114,34 @@ def getImageData(fname):
     data = data[..., np.newaxis]
     return data, hdr
 
-def resizeData(image, target=(256, 256)):
-    image = np.squeeze(image)
-    resized_img = []
-    for i in range(image.shape[0]):
-        img_slice = cv2.resize(image[i,:,:], target)
-        resized_img.append(img_slice)
+# get all files in target dir that end with nii
+all_files = glob.glob(target_dir+'/**/*.nii', recursive=True)
 
-    image = np.array(resized_img, dtype=np.uint16)
+# ignore masks
+files = [f for f in all_files if '_mask.nii' not in f]
+masks = [f for f in all_files if f not in files]
 
-    return image[..., np.newaxis]
+if not remasking:
+    files = [f for f in files if f[:-4] + '_mask.nii' not in masks]
+
+print('Found %d NIFTI files'%len(files))
+
+if remasking:
+    print('Remasking set to True, remasking all images found')
+else:
+    print('Remasking set to False, masking only images without a [file name]_mask.nii file')
+
+if post_processing:
+    print('Post processing set to True, post processing output masks')
+else:
+    print('Post processing set to False, not post processing output masks')
+
 
 # get all files in target dir that end with nii
 files = glob.glob(target_dir+'/**/*.nii', recursive=True)
 
 # ignore masks
-files = [f for f in files if 'mask.nii' not in f]
+files = [f for f in files if '_mask.nii' not in f]
 
 print('Found %d NIFTI files'%len(files))
 
@@ -95,7 +153,6 @@ if model_type == 'unet':
     print('Loading Unet model')
     model = Unet()
 
-skipped = []
 for img_path in tqdm(files):
     img, hdr = getImageData(img_path)
     resizeNeeded = False
@@ -103,14 +160,17 @@ for img_path in tqdm(files):
     if model_type == 'unet':
         if img.shape[1] != 256 and img.shape[2] != 256:
             original_shape = (img.shape[2], img.shape[1])
-            img = resizeData(img)
+            img = __resizeData(img)
             resizeNeeded = True
 
 
     res = model.predict_mask(img)
 
+    if post_processing:
+        res = __postProcessing(res)
+
     if resizeNeeded:
-        res = resizeData(res, target=original_shape)
+        res = __resizeData(res, target=original_shape)
 
     # remove extra dimension
     res = np.squeeze(res)
@@ -121,10 +181,3 @@ for img_path in tqdm(files):
     # Save result
     img_path = img_path[:img_path.rfind('.')]
     save(res, img_path + '_mask.nii', hdr)
-
-skipped_file = open("skipped.txt","w+")
-skipped_file.writelines(skipped)
-skipped_file.close()
-
-if len(skipped) > 0:
-    print('Skipped %d images, Unet can only work with 256x256/512x512 images for now'%len(skipped))

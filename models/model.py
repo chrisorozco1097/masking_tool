@@ -4,7 +4,6 @@ import cv2
 import abc
 
 import numpy as np
-<<<<<<< HEAD
 import sys, os
 
 # import os.path
