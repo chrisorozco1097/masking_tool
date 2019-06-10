@@ -37,12 +37,21 @@ parser.add_argument('--no-post-processing',
     help='flag to indicate predicted mask should not be post processed (morphological closing and defragged)')
 parser.set_defaults(post_processing=True)
 
+parser.add_argument('--match',
+    nargs='+',
+    help='Specify if only files with certain words should be masked, not case sensitive')
+
+model_type = 'unet'
+
 args = parser.parse_args()
 target_dir = args.target_dir
 remasking = args.remasking
 post_processing = args.post_processing
-model_type = 'unet'
+match = args.match
 
+if match:
+    for i in range(len(match)):
+        match[i] = match[i].lower()
 
 def __normalize0_255(img_slice):
     '''Normalizes the image to be in the range of 0-255
@@ -117,6 +126,9 @@ def getImageData(fname):
 # get all files in target dir that end with nii
 all_files = glob.glob(target_dir+'/**/*.nii', recursive=True)
 
+if match:
+    all_files = [f for f in all_files if any(m in f.lower() for m in match)]
+
 # ignore masks
 files = [f for f in all_files if '_mask.nii' not in f]
 masks = [f for f in all_files if f not in files]
@@ -135,7 +147,6 @@ if post_processing:
     print('Post processing set to True, post processing output masks')
 else:
     print('Post processing set to False, not post processing output masks')
-
 
 # get all files in target dir that end with nii
 files = glob.glob(target_dir+'/**/*.nii', recursive=True)
