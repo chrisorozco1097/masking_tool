@@ -10,10 +10,11 @@ import sys, os
 # import sys
 # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+bundle_dir = None
 if getattr(sys, 'frozen', False):
     bundle_dir = sys._MEIPASS
 else:
-    bundle_dir =  sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 class MaskingModel(metaclass=abc.ABCMeta):
     '''abstract class to guarantee children will
@@ -30,8 +31,12 @@ class Unet(MaskingModel):
     def __init__(self):
         '''Class constructor get json model and h5 weigths and load model'''
 
-        weight_path = os.path.join(bundle_dir, 'models/weights/unet_weights.h5')
-        model_path = os.path.join(bundle_dir, 'models/json_models/unet_model.json')
+        if bundle_dir:
+            weight_path = os.path.join(bundle_dir, 'models/weights/unet_weights.h5')
+            model_path = os.path.join(bundle_dir, 'models/json_models/unet_model.json')
+        else:
+            weight_path = 'models/weights/unet_weights.h5'
+            model_path = 'models/json_models/unet_model.json'
 
         json_file = open(model_path, 'r')
         json_model = json_file.read()
