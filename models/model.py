@@ -6,10 +6,6 @@ import abc
 import numpy as np
 import sys, os
 
-# import os.path
-# import sys
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 bundle_dir = None
 if getattr(sys, 'frozen', False):
     bundle_dir = sys._MEIPASS
@@ -45,48 +41,6 @@ class Unet(MaskingModel):
         self.unet_model = model_from_json(json_model)
         self.unet_model.load_weights(weight_path)
 
-    def __chooseMainComponent(self, image):
-        '''ChooseMainComponent function to only keep the
-        largest component of a prediction, removes unwanted
-        artifacts'''
-
-        image = image.astype('uint8')
-        # 3D image backbone
-        new_image = np.zeros(image.shape)
-
-        # go slice by slice of a prediction,
-        # and find best component
-        for i in range(image.shape[0]):
-            image_slice = image[i,:,:,:]
-            nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
-            image_slice, connectivity=4)
-            sizes = stats[:, -1]
-
-            #set the label that shows the largest compont
-            max_label = 1
-
-            #only one component
-            if len(sizes) < 3:
-                return image
-
-            max_size = sizes[1]
-
-            # get the largest component
-            for j in range(2, nb_components):
-                if sizes[j] > max_size:
-                    max_label = j
-                    max_size = sizes[j]
-
-            # 2D image slice, keep only largest component
-            new_slice = np.zeros(output.shape)
-            new_slice[output == max_label] = 1
-            new_slice = new_slice[..., np.newaxis]
-
-            # append 2D image to 3D image
-            new_image[i,:,:,:] = new_slice
-
-        return new_image
-
     def __getGenerator(self, image, bs=1):
         '''getGenerator Returns generator that will be used for
         prdicting, it takes a single 3D image and returns a generator
@@ -107,6 +61,5 @@ class Unet(MaskingModel):
         # only keep pixels with more than 0.5% probability of being brain
         mask[mask >= 0.5] = 1
         mask[mask < 0.5] = 0
-        mask = self.__chooseMainComponent(mask)
 
         return mask

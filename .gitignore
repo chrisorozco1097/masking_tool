@@ -1,4 +1,4 @@
 images/*.nii
 skipped.txt
-dist/
 build/
+__pycache__/

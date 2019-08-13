@@ -1,3 +1,6 @@
+#Brain masking tool
+#Developed by Alejandro Valdes
+
 import argparse
 import os
 import cv2
