@@ -1,6 +1,3 @@
-#Brain masking tool
-#Developed by Alejandro Valdes
-
 import argparse
 import os
 import cv2
@@ -131,9 +128,6 @@ def getImageData(fname):
 def main():
     # get all files in target dir that end with nii
     all_files = glob.glob(target_dir+'/**/*.nii', recursive=True)
-    all_gz_files = glob.glob(target_dir+'/**/*.nii.gz', recursive=True)
-
-    all_files += all_gz_files
 
     if match:
         all_files = [f for f in all_files if any(m in f.lower() for m in match)]
@@ -199,13 +193,7 @@ def main():
 
             # Save result
             img_path = img_path[:img_path.rfind('.')]
-
-            # this is for files ending in .nii.gz
-            if '.nii' in img_path:
-                img_path = img_path[:img_path.rfind('.')]
-
             save(res, img_path + '_mask.nii', hdr)
-
         except Exception as e:
             print(e)
             print('not stopping')
