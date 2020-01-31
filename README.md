@@ -7,7 +7,7 @@ The output will be an extra .nii file for each one of them, ending with the exac
 
 ## Requirements</b>
 - Python3
-- pip3
+- pip
 
 ## Instalation</b>
 
@@ -16,7 +16,7 @@ For an easy use of the tool is highly recommended to create a virtual environmen
 - ### Setting a virtual environment
 
 <br>Acces to your terminal and type the following:</br>
-<br><code>$ pip3 install virtualenv virtualenvwrapper</code></br>
+<br><code>$ pip install virtualenv virtualenvwrapper</code></br>
 <br>Then create a directory for the virtual environments:</br>
 <br><code>$ mkdir ~/python-envs </code>  
 <br>Now you'll add to your .bashrc file these two lines:</br>
