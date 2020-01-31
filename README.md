@@ -38,7 +38,7 @@ Once you're in your own environment acces to the desired location and type the f
 <br><code>$ git clone https://github.com/chrisorozco1097/masking_tool</code></br>
 <br><code>$ cd masking_tool</code></br>
 <br>Now install the requirements</br>
-<br><code>$ pip3 install -r requirements.txt</code></br>
+<br><code>$ pip install -r requirements.txt</code></br>
 <br>And finally execute the tool:</br>
 <br><code>$ python brain_mask.py --target_dir path_to_your_directory</code></br>
 <br>If you don't specify a directory the tool wil target the .nii files found in the local directory.</br>
